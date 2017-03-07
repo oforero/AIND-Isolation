@@ -88,7 +88,6 @@ def play_match(player1, player2):
                 num_invalid_moves[player2] += 1
 
         elif player2 == winner:
-
             num_wins[player2] += 1
 
             if termination == "timeout":
@@ -99,7 +98,7 @@ def play_match(player1, player2):
     if sum(num_timeouts.values()) != 0:
         warnings.warn(TIMEOUT_WARNING)
 
-    return num_wins[player1], num_wins[player2]
+    return num_wins[player1], num_wins[player2], num_timeouts[player1]
 
 
 def play_round(agents, num_matches):
@@ -122,15 +121,16 @@ def play_round(agents, num_matches):
         # Each player takes a turn going first
         for p1, p2 in itertools.permutations((agent_1.player, agent_2.player)):
             for _ in range(num_matches):
-                score_1, score_2 = play_match(p1, p2)
+                score_1, score_2, timeouts = play_match(p1, p2)
                 counts[p1] += score_1
                 counts[p2] += score_2
                 total += score_1 + score_2
 
         wins += counts[agent_1.player]
 
-        print("\tResult: {} to {}".format(int(counts[agent_1.player]),
-                                          int(counts[agent_2.player])))
+        print("\tResult: {} to {} (by timeout: {})".format(int(counts[agent_1.player]),
+                                                           int(counts[agent_2.player]),
+                                                           timeouts))
 
     return 100. * wins / total
 
