@@ -54,8 +54,8 @@ def custom_score(game: Board, player) -> float:
     my_moves = get_moves_1_ahead(game, player)
     opponent_moves = get_moves_1_ahead(game, opponent)
 
-    #div = float(len(my_moves & opponent_moves)) if my_moves & opponent_moves else 1.0
-    return (len(my_moves - opponent_moves) - len(opponent_moves - my_moves)) #/ div
+    div = float(len(opponent_moves)) #if my_moves & opponent_moves else 1.0
+    return float("inf") if div == 0 else (len(my_moves)) / div
 
 
 class CustomPlayer:
