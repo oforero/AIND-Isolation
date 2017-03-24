@@ -40,7 +40,7 @@ def custom_score(game: Board, player) -> float:
     def get_moves_1_ahead(game, player):
         moves = game.get_legal_moves(player)
         more_moves = chain(*map(lambda m: game.__get_moves__(m), moves))
-        more_moves = chain(*map(lambda m: game.__get_moves__(m), more_moves))
+        #more_moves = chain(*map(lambda m: game.__get_moves__(m), more_moves))
         more_moves = set(more_moves)
         return more_moves
 
