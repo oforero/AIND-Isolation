@@ -261,7 +261,7 @@ class Board(object):
         directions = [(-2, -1), (-2, 1), (-1, -2), (-1, 2),
                       (1, -2),  (1, 2), (2, -1),  (2, 1)]
 
-        valid_moves = [(r+dr,c+dc) for dr, dc in directions if self.move_is_legal((r+dr, c+dc))]
+        valid_moves = [(r+dr, c+dc) for dr, dc in directions if self.move_is_legal((r+dr, c+dc))]
 
         return valid_moves
 

@@ -6,7 +6,7 @@ augment the test suite with your own test cases to further test your code.
 You must test your agent's strength against a set of agents with known
 relative strength using tournament.py and include the results in your report.
 """
-from typing import Tuple
+from typing import Tuple, List, Callable
 from itertools import chain
 from isolation import Board
 
@@ -39,9 +39,9 @@ def custom_score(game: Board, player) -> float:
     """
     def get_moves_1_ahead(game, player):
         moves = game.get_legal_moves(player)
-        #more_moves = chain(*map(lambda m: game.__get_moves__(m), moves))
+        more_moves = chain(*map(lambda m: game.__get_moves__(m), moves))
         #more_moves = chain(*map(lambda m: game.__get_moves__(m), more_moves))
-        more_moves = set(moves)
+        more_moves = set(more_moves)
         return more_moves
 
     if game.is_loser(player):
@@ -54,8 +54,8 @@ def custom_score(game: Board, player) -> float:
     my_moves = get_moves_1_ahead(game, player)
     opponent_moves = get_moves_1_ahead(game, opponent)
 
-    div = float(len(my_moves & opponent_moves)) if my_moves & opponent_moves else 1.0
-    return (len(my_moves - opponent_moves) - len(opponent_moves - my_moves)) / div
+    #div = float(len(my_moves & opponent_moves)) if my_moves & opponent_moves else 1.0
+    return (len(my_moves - opponent_moves) - len(opponent_moves - my_moves)) #/ div
 
 
 class CustomPlayer:
@@ -142,7 +142,7 @@ class CustomPlayer:
         # move from the game board (i.e., an opening book), or returning
         # immediately if there are no legal moves
 
-        score, move = float("-inf"), (-1, -1)
+        best_score, best_move = float("-inf"), (-1, -1)
         try:
             # The search method call (alpha beta or minimax) should happen in
             # here in order to avoid timeout. The try/except block will
@@ -153,22 +153,27 @@ class CustomPlayer:
             while legal_moves and time_left() > self.TIMER_THRESHOLD:
                 if duration < time_left() and time_left() > self.TIMER_THRESHOLD:
                     duration = time_left()
-                    score, move = self.method_fn(game, depth)
+                    score, move = self.method_fn(game, depth, time_left)
                     duration -= time_left()
-                if self.iterative:
-                    depth += 1
-                else:
+                    # if (score, move) != (best_score, best_move):
+                    #     print("Move changed: ", depth, score, move)
+                    best_score, best_move = score, move
+
+                if not self.iterative or depth == self.search_depth:
                     break
+
+                depth += 1
 
         except Timeout:
             # Handle any actions required at timeout, if necessary
-            print("Timeout!! ", move, time_left())
+            # print("Timeout!! ", time_left())
             pass
 
-        #print("minimax: ", depth, best_score, best_move)
-        return move
+        # print("Move chosen: ", depth, best_score, best_move, time_left())
+        return best_move
 
-    def minimax(self, game: Board, depth: int, maximizing_player: bool=True) -> Tuple[float, Tuple[int, int]]:
+    def minimax(self, game: Board, depth: int,
+                time_left: Callable) -> Tuple[float, Tuple[int, int]]:
         """Implement the minimax search algorithm as described in the lectures.
 
         Parameters
@@ -203,6 +208,8 @@ class CustomPlayer:
             moves = g.get_legal_moves()
             best_score, best_move = float("-inf"), (-1, -1)
             for move in moves:
+                if time_left() < self.TIMER_THRESHOLD:
+                    raise Timeout()
                 new_game = g.forecast_move(move)
                 if d == 1:
                     score = self.score(new_game, self)
@@ -215,6 +222,8 @@ class CustomPlayer:
             moves = g.get_legal_moves()
             best_score, best_move = float("inf"), (-1, -1)
             for move in moves:
+                if time_left() < self.TIMER_THRESHOLD:
+                    raise Timeout()
                 new_game = g.forecast_move(move)
                 if d == 1:
                     score = self.score(new_game, self)
@@ -225,7 +234,8 @@ class CustomPlayer:
 
         return max_play(game, depth)
 
-    def alphabeta(self, game, depth, alpha=float("-inf"), beta=float("inf"), maximizing_player=True):
+    def alphabeta(self, game, depth, time_left: Callable,
+                  alpha=float("-inf"), beta=float("inf")) -> Tuple[float, Tuple[int, int]]:
         """Implement minimax search with alpha-beta pruning as described in the
         lectures.
 
@@ -263,39 +273,42 @@ class CustomPlayer:
                 to pass the project unit tests; you cannot call any other
                 evaluation function directly.
         """
-        def max_play(g: Board, d: int, a: float, b: float) -> Tuple[float, Tuple[int, int]]:
-            #print("Max: ", d, a, b)
+        def moves_by_rank(g: Board, reverse=False) -> List[Tuple[float, Tuple[int, int]]]:
             moves = g.get_legal_moves()
+            moves_w_r = sorted(map(lambda m: (0.0 + len(g.__get_moves__(m)), m), moves), reverse=reverse)
+            return moves_w_r
+
+        def max_play(g: Board, d: int, a: float, b: float) -> Tuple[float, Tuple[int, int]]:
+            moves = moves_by_rank(g, reverse=True)
             best_score, best_move = float("-inf"), (-1, -1)
-            for move in moves:
-                #print("Max check: ", best_score, b)
+            for _, move in moves:
+                if time_left() < self.TIMER_THRESHOLD:
+                    raise Timeout()
                 if best_score >= b:
-                    print("Beta Pruning")
                     break
                 else:
                     new_game = g.forecast_move(move)
                     if d == 1:
                         score = self.score(new_game, self)
                     else:
-                        score, _ = min_play(new_game, d - 1, best_score, b)
+                        score, _ = min_play(new_game, d - 1, max(best_score, a), b)
                 best_score, best_move = max([(best_score, best_move), (score, move)])
             return best_score, best_move
 
         def min_play(g: Board, d: int, a: float, b: float) -> Tuple[float, Tuple[int, int]]:
-            #print("Min: ", d, a, b)
-            moves = g.get_legal_moves()
+            moves = moves_by_rank(g, reverse=False)
             best_score, best_move = float("inf"), (-1, -1)
-            for move in moves:
-                #print("Min check: ", best_score <= alpha, best_score, a)
+            for _, move in moves:
+                if time_left() < self.TIMER_THRESHOLD:
+                    raise Timeout()
                 if best_score <= a:
-                    print("Alpha Pruning")
                     break
                 else:
                     new_game = g.forecast_move(move)
                     if d == 1:
                         score = self.score(new_game, self)
                     else:
-                        score, _ = max_play(new_game, d - 1, a, best_score)
+                        score, _ = max_play(new_game, d - 1, a, min(best_score, b))
                 best_score, best_move = min([(best_score, best_move), (score, move)])
             return best_score, best_move
 
