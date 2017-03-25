@@ -37,3 +37,5 @@ data <- data.frame(idim_1=id_improved_1, custom_1=custom_1,
                    idim_3=id_improved_3, custom_3=custom_3)
 boxplot(data)
 
+t.test(custom_3, custom_2, alternative="g", conf.level = 0.95)
+
