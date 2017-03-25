@@ -9,6 +9,7 @@ relative strength using tournament.py and include the results in your report.
 from typing import Tuple, List, Callable
 from itertools import chain
 from isolation import Board
+from sample_players import fractional_2_deep
 
 class Timeout(Exception):
     """Subclass base exception for code clarity."""
@@ -37,25 +38,7 @@ def custom_score(game: Board, player) -> float:
     float
         The heuristic value of the current game state to the specified player.
     """
-    def get_moves_1_ahead(game, player):
-        moves = game.get_legal_moves(player)
-        more_moves = chain(*map(lambda m: game.__get_moves__(m), moves))
-        #more_moves = chain(*map(lambda m: game.__get_moves__(m), more_moves))
-        more_moves = set(more_moves)
-        return more_moves
-
-    if game.is_loser(player):
-        return float("-inf")
-
-    if game.is_winner(player):
-        return float("inf")
-
-    opponent = game.get_opponent(player)
-    my_moves = get_moves_1_ahead(game, player)
-    opponent_moves = get_moves_1_ahead(game, opponent)
-
-    div = float(len(opponent_moves)) #if my_moves & opponent_moves else 1.0
-    return float("inf") if div == 0 else (len(my_moves)) / div
+    fractional_2_deep(game, player)
 
 
 class CustomPlayer:
@@ -153,7 +136,7 @@ class CustomPlayer:
             while legal_moves and time_left() > self.TIMER_THRESHOLD:
                 if duration < time_left() and time_left() > self.TIMER_THRESHOLD:
                     duration = time_left()
-                    score, move = self.method_fn(game, depth, time_left)
+                    score, move = self.method_fn(game, depth, time_left=time_left)
                     duration -= time_left()
                     # if (score, move) != (best_score, best_move):
                     #     print("Move changed: ", depth, score, move)
@@ -173,7 +156,7 @@ class CustomPlayer:
         return best_move
 
     def minimax(self, game: Board, depth: int,
-                time_left: Callable) -> Tuple[float, Tuple[int, int]]:
+                time_left: Callable = None) -> Tuple[float, Tuple[int, int]]:
         """Implement the minimax search algorithm as described in the lectures.
 
         Parameters
@@ -186,9 +169,8 @@ class CustomPlayer:
             Depth is an integer representing the maximum number of plies to
             search in the game tree before aborting
 
-        maximizing_player : bool
-            Flag indicating whether the current search depth corresponds to a
-            maximizing layer (True) or a minimizing layer (False)
+        time_left: Callable
+            A function that returns the amount of time left to search the tree
 
         Returns
         -------
@@ -208,7 +190,7 @@ class CustomPlayer:
             moves = g.get_legal_moves()
             best_score, best_move = float("-inf"), (-1, -1)
             for move in moves:
-                if time_left() < self.TIMER_THRESHOLD:
+                if time_left and time_left() < self.TIMER_THRESHOLD:
                     raise Timeout()
                 new_game = g.forecast_move(move)
                 if d == 1:
@@ -222,7 +204,7 @@ class CustomPlayer:
             moves = g.get_legal_moves()
             best_score, best_move = float("inf"), (-1, -1)
             for move in moves:
-                if time_left() < self.TIMER_THRESHOLD:
+                if time_left and time_left() < self.TIMER_THRESHOLD:
                     raise Timeout()
                 new_game = g.forecast_move(move)
                 if d == 1:
@@ -234,8 +216,8 @@ class CustomPlayer:
 
         return max_play(game, depth)
 
-    def alphabeta(self, game, depth, time_left: Callable,
-                  alpha=float("-inf"), beta=float("inf")) -> Tuple[float, Tuple[int, int]]:
+    def alphabeta(self, game, depth, alpha=float("-inf"), beta=float("inf"),
+                  time_left: Callable = None) -> Tuple[float, Tuple[int, int]]:
         """Implement minimax search with alpha-beta pruning as described in the
         lectures.
 
@@ -255,9 +237,9 @@ class CustomPlayer:
         beta : float
             Beta limits the upper bound of search on maximizing layers
 
-        maximizing_player : bool
-            Flag indicating whether the current search depth corresponds to a
-            maximizing layer (True) or a minimizing layer (False)
+        time_left: Callable
+            A function that returns the amount of time left to search the tree
+
 
         Returns
         -------
@@ -282,7 +264,7 @@ class CustomPlayer:
             moves = moves_by_rank(g, reverse=True)
             best_score, best_move = float("-inf"), (-1, -1)
             for _, move in moves:
-                if time_left() < self.TIMER_THRESHOLD:
+                if time_left and time_left() < self.TIMER_THRESHOLD:
                     raise Timeout()
                 if best_score >= b:
                     break
@@ -299,7 +281,7 @@ class CustomPlayer:
             moves = moves_by_rank(g, reverse=False)
             best_score, best_move = float("inf"), (-1, -1)
             for _, move in moves:
-                if time_left() < self.TIMER_THRESHOLD:
+                if time_left and time_left() < self.TIMER_THRESHOLD:
                     raise Timeout()
                 if best_score <= a:
                     break
